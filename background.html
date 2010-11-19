@@ -1,0 +1,67 @@
+<html>
+<script>
+
+var PAT1 = /^(\d\d)-(\d\d) (\d\d):(\d\d)(AM|PM) (\d\d)\.(\d\d\d)$/;
+var PAT2 = /^\s*(\d\d\d\d)\/(\d\d)\/(\d\d) (\d\d):(\d\d):(\d\d)\s*$/;
+var PAT3 = /^(\d\d\d\d)-(\d\d)-(\d\d) (\d\d):(\d\d):(\d\d)$/;
+var GMTADJUST = 8 * 60 * 60000;
+var TZOFFSET = (new Date()).getTimezoneOffset() * 60000;
+
+function parse(str){
+  var m = str.match(PAT1);
+  var ret = new Date();
+  ret.setMonth(parseInt(m[1], 10) - 1);
+  ret.setDate(parseInt(m[2], 10));
+  ret.setHours(parseInt(m[3] == '12' ? 0 : m[3], 10) + (m[5] == "PM" ? 12 : 0));
+  ret.setMinutes(parseInt(m[4], 10));
+  ret.setSeconds(parseInt(m[6], 10));
+  ret.setMilliseconds(parseInt(m[7], 10));
+  return ret;
+}
+function toShortString(date){
+  return pad(date.getMonth() + 1, 2) + "/" + pad(date.getDate(), 2) + " " + pad(date.getHours(), 2) + ":" + pad(date.getMinutes(), 2) + ":" + pad(date.getSeconds(), 2) + "." + pad(date.getMilliseconds(), 3);
+}
+function toString(date){
+  return pad(date.getFullYear(), 4) + "/" + pad(date.getMonth() + 1, 2) + "/" + pad(date.getDate(), 2) + " " + pad(date.getHours(), 2) + ":" + pad(date.getMinutes(), 2) + ":" + pad(date.getSeconds(), 2);
+}
+function pad(str, length){
+  str = new String(str);
+  var ret = "";
+  var len = length - str.length;
+  for(var i = 0; i < len; ++i){
+    ret += "0";
+  }
+  ret += str;
+  return ret;
+}
+
+chrome.extension.onRequest.addListener(
+  function(request, sender, sendResponse) {
+    var ret;
+    if(request.text.match(PAT1)){
+      var d = new Date(parse(request.text) - TZOFFSET + GMTADJUST);
+      ret = toShortString(d);
+    }else if(request.text.match(PAT2)){
+      var d = new Date(Date.parse(request.text) - TZOFFSET);
+      ret = toString(d);
+    }else if(request.text.match(PAT3)){
+      var d = new Date(Date.parse(request.text) - TZOFFSET + GMTADJUST);
+      ret = toString(d);
+    }
+    sendResponse({text: ret});
+  }
+);
+
+var LOGS_URL = /^https?:\/\/appengine\.google\.com\/logs/
+setInterval(function(){
+  chrome.tabs.getAllInWindow(null, function(tabs){
+    for(var i = 0;i < tabs.length;i++){
+      if(tabs[i].status == "complete" && tabs[i].url.match(LOGS_URL) != null){
+        chrome.tabs.sendRequest(tabs[i].id, {type:"replaceDate"});
+      }
+    }
+  });
+}, 500);
+
+</script>
+</html>

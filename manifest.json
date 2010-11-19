@@ -1,0 +1,16 @@
+{
+  "name": "GAE Timezone Adjuster",
+  "version": "1.0.1",
+  "description": "adjust timezone in appengine.google.com",
+  "icons": { "48": "icon.gif"},
+  "background_page": "background.html",
+  "content_scripts": [
+    {
+      "matches": ["https://appengine.google.com/*"],
+      "js": ["jquery-1.4.3.min.js","contentscript.js"]
+    }
+  ],
+  "permissions": [
+    "tabs"
+  ]
+}
